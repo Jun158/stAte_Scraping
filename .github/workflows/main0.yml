@@ -3,7 +3,7 @@ name: test_chatbota
 
 # timing 
 on:
-  puch
+  push
 #  schedule:
 #    - cron: '0 13 * * *'
 
