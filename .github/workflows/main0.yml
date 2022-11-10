@@ -1,0 +1,44 @@
+# flow nameff
+name: test_chatbota
+
+# timing 
+on:
+  schedule:
+    - cron: '0 13 * * *'
+
+jobs:
+  selenium: # cf: https://docs.github.com/en/actions/using-jobs/using-jobs-in-a-workflow
+    # Ubuntu
+    runs-on: ubuntu-latest # cf: https://docs.github.com/en/actions/using-jobs/choosing-the-runner-for-a-job
+
+    # workflow
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+          architecture: 'x64'
+      - name: Install dependencies
+        run: |
+          # update pip
+          python -m pip install --upgrade pip
+          # Libraries
+          pip install line-bot-sdk
+          pip install selenium
+          pip install webdriver_manager
+          pip install get-chrome-driver --upgrade
+          pip install packaging
+      
+      - name: run python
+        env:
+          aStateName: ${{ secrets.ASTATE_USERNAME }}
+          aStatePw: ${{ secrets.ASTATE_PW }}
+          lineToken: ${{ secrets.CHANNEL_ACCESS_TOKEN }}
+          lineId: ${{ secrets.USER_ID }}
+          
+
+        run: |
+          # Execute code
+          python aStateFlex.py
+        
