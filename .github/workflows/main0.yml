@@ -3,8 +3,9 @@ name: test_chatbota
 
 # timing 
 on:
-  schedule:
-    - cron: '0 13 * * *'
+  puch
+#  schedule:
+#    - cron: '0 13 * * *'
 
 jobs:
   selenium: # cf: https://docs.github.com/en/actions/using-jobs/using-jobs-in-a-workflow
