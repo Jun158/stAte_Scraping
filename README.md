@@ -1,3 +1,5 @@
+*version 1.0 - Dec 02, 2020 initial version by Junkou Kobayashi* 
+
 # stAte_Scraping
 This is a program that automatically scrapes the history of the university's currency (currency used at Arkansas State University) at regular intervals and sends the total amount spent from a day you redeem money and the balance to the official account of the communication application, LINE.
 
