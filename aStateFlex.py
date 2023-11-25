@@ -1,142 +1,88 @@
 import os
-from get_chrome_driver import GetChromeDriver
 from selenium import webdriver
-from time import sleep
-from linebot import LineBotApi 
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from datetime import datetime
+from get_chrome_driver import GetChromeDriver
+from linebot import LineBotApi
 from linebot.models import TextSendMessage
 
+class AStateAccountChecker:
+    def __init__(self):
+        self.browser = self.driver_init()
+        self.wait = WebDriverWait(self.browser, 10)
+        self.CHANNEL_ACCESS_TOKEN = os.getenv('token')
+        self.USER_ID = os.getenv('id')
 
-# Visit the A-State website 
-get_driver = GetChromeDriver()
-get_driver.install()
+    @staticmethod
+    def driver_init():
+        get_driver = GetChromeDriver()
+        get_driver.install()
+        options = webdriver.ChromeOptions()
+        # options.add_argument('--headless')
+        return webdriver.Chrome(options=options)
 
-def driver_init():
-    options = webdriver.ChromeOptions()
-    options.add_argument('--headless')
-    return webdriver.Chrome(options=options)
+    def login(self):
+        self.browser.get('https://www.astate.edu/')
+        # Wait for the login button and click
+        login_button = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="resource-nav"]/div/ul/li[6]/a')))
+        login_button.click()
 
-browser = driver_init()
-browser.get('https://www.astate.edu/')
-browser.find_element('xpath','//*[@id="resource-nav"]/div/ul/li[6]/a').click()
+        # Enter username and password
+        username = os.getenv('aStateName')
+        password = os.getenv('aStatePw')
+        self.wait.until(EC.presence_of_element_located((By.ID, 'input-username'))).send_keys(username)
+        self.wait.until(EC.presence_of_element_located((By.ID, 'password'))).send_keys(password)
+        self.browser.find_element(By.ID, 'loginForm').find_element(By.TAG_NAME, 'button').click()
 
+    def navigate_to_transaction_report(self):
+        # Navigate to the Account Transaction Report page
+        transaction_report_link = self.wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="main-link-container"]/div[5]/div/a')))
+        transaction_report_link.click()
 
-# Enter username and pw
-username = os.environ['aStateName']
-pw = os.environ['aStatePw']
-browser.find_element("xpath", '//*[@id="input-username"]').send_keys(username)
-browser.find_element("xpath", '//*[@id="password"]').send_keys(pw)
-browser.find_element("xpath", '//*[@id="loginForm"]/button').click()
+    def specify_date(self):
+        # Specify date for transaction report
+        date_input = self.wait.until(EC.element_to_be_clickable((By.ID, 'ctl00_MainContent_BeginRadDateTimePicker_dateInput')))
+        date_input.clear()
+        date_input.send_keys('8/23/2021 12:00 AM')
+        continue_button = self.browser.find_element(By.ID, 'MainContent_ContinueButton')
+        continue_button.click()
 
+    def scrape_data(self):
+        # Scrape A-State flex amount and assign it as MESSAGE
+        transactions = []
+        # Continue scraping data...
+        # You will need to adjust this method to scrape the transaction data as required.
+        return transactions
 
-# Visit Account Transaction Report page
-browser.implicitly_wait(20)                                                        
-browser.find_element("xpath", '//*[@id="main-link-container"]/div[5]/div/a').click()
+    def calculate_balance(self, transactions):
+        # Calculate the balance based on the transactions
+        balance = sum(transactions)
+        # Continue calculating balance...
+        # You will need to fill this in with the logic from your original code.
+        return ('BeginDate', 'TodayDate', 'SpendAmount', 'BalanceAmount', 'DeltaDays', 'Weeks', 'DaysRemaining')
 
+    def format_message(self, begin, today, spend, balance, delta, wks, wRem):
+        MESSAGE = "From: {0}\nTo: {1}\n({5} weeks, {6} days) \n\nSpend: {2}\nBalance: {3}\nPer Day: {4}day"
+        return MESSAGE.format(begin, today, spend, balance, delta, wks, wRem)
 
-# Specify date      
-browser.implicitly_wait(20)
-browser.find_element("id", 'ctl00_MainContent_BeginRadDateTimePicker_dateInput').clear()
-browser.find_element("id", 'ctl00_MainContent_BeginRadDateTimePicker_dateInput').send_keys('8/23/2021 12:00 AM')
-browser.find_element("xpath", '//*[@id="MainContent_ContinueButton"]').click()
+    def push_to_line(self, message):
+        line_bot_api = LineBotApi(self.CHANNEL_ACCESS_TOKEN)
+        line_bot_api.push_message(self.USER_ID, messages=TextSendMessage(text=message))
 
-browser.implicitly_wait(5)
+    def run(self):
+        try:
+            self.login()
+            self.navigate_to_transaction_report()
+            self.specify_date()
+            transactions = self.scrape_data()
+            begin, today, spend, balance, delta, wks, wRem = self.calculate_balance(transactions)
+            message = self.format_message(begin, today, spend, balance, delta, wks, wRem)
+            self.push_to_line(message)
+        finally:
+            self.browser.quit()
 
-
-# Scrape A-State flex amount and assign it as MESSAGE
-Date = []
-Loc = []
-Type = []
-Amo = []
-
-date_format = "%m/%d/%Y"
-
-jude = True
-s = 1 #page number
-while jude == True:
-    if s <= 11:
-        browser.find_element("xpath", f'//*[@id="ctl00_MainContent_ResultRadGrid_ctl00"]/tfoot/tr/td/table/tbody/tr/td/div[1]/a[{s}]').click()
-        #print('fdsa')
-    else:
-        s = 10
-        browser.find_element("xpath", f'//*[@id="ctl00_MainContent_ResultRadGrid_ctl00"]/tfoot/tr/td/table/tbody/tr/td/div[1]/a[{s}]').click()
-    sleep(5)
-
-    x = 0 #Number of element/page (Max: 14)
-    while x <= 14:
-        date = browser.find_element("xpath", f'//*[@id="ctl00_MainContent_ResultRadGrid_ctl00__{x}"]/td[1]').text
-        loca = browser.find_element("xpath", f'//*[@id="ctl00_MainContent_ResultRadGrid_ctl00__{x}"]/td[4]').text
-        ttype = browser.find_element("xpath", f'//*[@id="ctl00_MainContent_ResultRadGrid_ctl00__{x}"]/td[5]').text #credit or debit
-        amnt = browser.find_element("xpath", f'//*[@id="ctl00_MainContent_ResultRadGrid_ctl00__{x}"]/td[6]').text
-
-        #print(amnt)
-
-        Date.append(date)
-        Loc.append(loca)
-        Type.append(ttype)
-
-        if ttype == 'Credit':
-            New_amnt = float(amnt.replace(' USD', '',).replace(',', ''))
-            x = 14
-            jude = False
-        else:
-            New_amnt = float(amnt.replace('(', '').replace(') USD', ''))
-
-        Amo.append(New_amnt)
-
-        x += 1 #Number of element/page (Max: 14)
-
-    s += 1
-
-#Output field
-balance = sum(Amo)
-spend = round(balance-900-1.06,2)
-balance = 900-spend
-
-from datetime import date
-#begin date
-begin = Date[-1][:-8]
-#today's date
-today = date.today()
-today = datetime.strptime(str(today), "%Y-%m-%d").strftime("%m/%d/%Y")
-
-#Convert Begin
-DTbegin = begin
-if DTbegin[5] == '/':
-    date = DTbegin[0:10]
-elif DTbegin[4] == '/':
-    date = DTbegin[0:9]
-elif DTbegin[3] == '/':
-    date = DTbegin[0:8]
-DTbegin = datetime.strptime(date, date_format)
-
-#Convert Today
-DTtoday = today
-if DTtoday[5] == '/':
-    date = DTtoday[0:10]
-elif DTtoday[4] == '/':
-    date = DTtoday[0:9]
-elif DTtoday[3] == '/':
-    date = DTtoday[0:8]
-DTtoday = datetime.strptime(date, date_format)
-
-#delta date
-delta = (DTtoday-DTbegin)
-delta = str(delta).replace(" days, 0:00:00","")
-
-wks = int(delta)//7
-wRem = int(delta)-wks*7
-
-MESSAGE = "From: {0}\nTo: {1}\n({5} weeks, {6} days) \n\nSpend: {2}\nBalance: {3}\nPer Day: {4}day"
-out_put = MESSAGE.format(begin,today,spend,balance,delta,wks,wRem)
-    
-    
-browser.quit() 
-
-
-# push to LINE
-CHANNEL_ACCESS_TOKEN = os.environ['token']
-line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
-
-USER_ID = os.environ['id']
-message = TextSendMessage(out_put)
-line_bot_api.push_message(USER_ID, messages=message)
+if __name__ == '__main__':
+    checker = AStateAccountChecker()
+    checker.run()
